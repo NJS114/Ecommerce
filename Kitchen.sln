@@ -6,12 +6,15 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Console.Commerce", "..\Console.Commerce\Console.Commerce.csproj", "{348E6BBD-64EA-4C9E-90B1-CC6FB7E8C101}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8DA67289-6812-4165-950D-5936DCCC0F7A}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ecommerce.Services", "Ecommerce.Services\Ecommerce.Services.csproj", "{435DF05A-192F-4961-AEC2-C01200F16E94}"
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{07B8E45E-2262-44C9-B4AA-15A8120E54DB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Front-end", "Front-end\Front-end.csproj", "{569565C1-05F9-42EA-9F31-50010BDA748D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Front-end", "Front-end\Front-end.csproj", "{569565C1-05F9-42EA-9F31-50010BDA748D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
