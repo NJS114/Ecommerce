@@ -1,0 +1,76 @@
+version: '3.4'
+
+services:
+  # Nï¿½ud maï¿½tre
+  es-master:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    environment:
+      - node.name=es-master
+      - node.roles=master
+      - cluster.name=es-cluster
+      - discovery.seed_hosts=es-master,es-data1,es-data2,es-ingest,es-coord
+      - cluster.initial_master_nodes=es-master
+      - ELASTIC_PASSWORD=yourpassword
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"  # Port pour l'accï¿½s au cluster
+    networks:
+      - elastic-net
+
+  # Nï¿½ud de donnï¿½es 1
+  es-data1:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    environment:
+      - node.name=es-data1
+      - node.roles=data
+      - cluster.name=es-cluster
+      - discovery.seed_hosts=es-master,es-data1,es-data2,es-ingest,es-coord
+      - ELASTIC_PASSWORD=yourpassword
+      - xpack.security.enabled=false
+    networks:
+      - elastic-net
+
+  # Nï¿½ud de donnï¿½es 2
+  es-data2:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    environment:
+      - node.name=es-data2
+      - node.roles=data
+      - cluster.name=es-cluster
+      - discovery.seed_hosts=es-master,es-data1,es-data2,es-ingest,es-coord
+      - ELASTIC_PASSWORD=yourpassword
+      - xpack.security.enabled=false
+    networks:
+      - elastic-net
+
+  # Nï¿½ud d'ingestion
+  es-ingest:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    environment:
+      - node.name=es-ingest
+      - node.roles=ingest
+      - cluster.name=es-cluster
+      - discovery.seed_hosts=es-master,es-data1,es-data2,es-ingest,es-coord
+      - ELASTIC_PASSWORD=yourpassword
+      - xpack.security.enabled=false
+    networks:
+      - elastic-net
+
+  # Nï¿½ud de coordination
+  es-coord:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    environment:
+      - node.name=es-coord
+      - node.roles=coordinating_only
+      - cluster.name=es-cluster
+      - discovery.seed_hosts=es-master,es-data1,es-data2,es-ingest,es-coord
+      - ELASTIC_PASSWORD=yourpassword
+      - xpack.security.enabled=false
+    networks:
+      - elastic-net
+    ports:
+      - "9300:9300"  # Port pour la communication entre nï¿½uds
+
+networks:
+  elastic-net:
+    driver: bridge

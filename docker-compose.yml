@@ -1,0 +1,90 @@
+version: '3.4'
+
+services:
+  # Nœud maître
+  es-master:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    environment:
+      - node.name=es-master
+      - node.roles=master
+      - cluster.name=es-cluster
+      - discovery.seed_hosts=es-master,es-data1,es-data2,es-ingest,es-coord
+      - cluster.initial_master_nodes=es-master
+      - ELASTIC_PASSWORD=yourpassword
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"  # Port pour l'accès au cluster
+    networks:
+      - elastic-net
+
+  # Nœud de données 1
+  es-data1:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    environment:
+      - node.name=es-data1
+      - node.roles=data
+      - cluster.name=es-cluster
+      - discovery.seed_hosts=es-master,es-data1,es-data2,es-ingest,es-coord
+      - ELASTIC_PASSWORD=yourpassword
+      - xpack.security.enabled=false
+    networks:
+      - elastic-net
+
+  # Nœud de données 2
+  es-data2:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    environment:
+      - node.name=es-data2
+      - node.roles=data
+      - cluster.name=es-cluster
+      - discovery.seed_hosts=es-master,es-data1,es-data2,es-ingest,es-coord
+      - ELASTIC_PASSWORD=yourpassword
+      - xpack.security.enabled=false
+    networks:
+      - elastic-net
+
+  # Nœud d'ingestion
+  es-ingest:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    environment:
+      - node.name=es-ingest
+      - node.roles=ingest
+      - cluster.name=es-cluster
+      - discovery.seed_hosts=es-master,es-data1,es-data2,es-ingest,es-coord
+      - ELASTIC_PASSWORD=yourpassword
+      - xpack.security.enabled=false
+    networks:
+      - elastic-net
+
+  # Nœud de coordination
+  es-coord:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    environment:
+      - node.name=es-coord
+      - node.roles=coordinating_only
+      - cluster.name=es-cluster
+      - discovery.seed_hosts=es-master,es-data1,es-data2,es-ingest,es-coord
+      - ELASTIC_PASSWORD=yourpassword
+      - xpack.security.enabled=false
+    networks:
+      - elastic-net
+    ports:
+      - "9300:9300"  # Port pour la communication entre nœuds
+
+  # Service principal eCommerce
+  ecommerce.services:
+    build:
+      context: ./Ecommerce.Services  # Chemin relatif vers le dossier contenant le Dockerfile
+      dockerfile: Dockerfile
+    ports:
+      - "5000:80"
+      - "5001:443"
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=AOUNI;Database=Ecommerce;Integrated Security=True;Connect Timeout=30;Encrypt=True;Trust Server Certificate=True;Application Intent=ReadWrite;Multi Subnet Failover=False
+      - Elasticsearch__Uri=http://es-master:9200
+    networks:
+      - elastic-net
+
+networks:
+  elastic-net:
+    driver: bridge
