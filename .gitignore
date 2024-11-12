@@ -1,0 +1,5 @@
+# Ignorer les dossiers temporaires et spécifiques à Visual Studio
+.vs/
+bin/
+obj/
+*.swp
