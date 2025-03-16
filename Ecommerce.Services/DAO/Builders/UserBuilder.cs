@@ -1,8 +1,8 @@
-﻿using  Ecommerce.Services.DAO.Models;
+﻿using Ecommerce.Services.DAO.Models;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace  Ecommerce.Services.DAO.Builders
+namespace Ecommerce.Services.DAO.Builders
 {
     public class UserBuilder
     {
@@ -17,12 +17,20 @@ namespace  Ecommerce.Services.DAO.Builders
         {
             _user = user;
         }
-
-        public UserBuilder SetName(string fullName)
+        public UserBuilder SetStripeAccountId(string stripeAccountId)
         {
-            var names = fullName.Split(' ');
-            _user.FirstName = names[0];
-            _user.LastName = names.Length > 1 ? names[1] : string.Empty; 
+            _user.StripeAccountId = stripeAccountId;
+            return this;
+        }
+        public UserBuilder SetId(string id)
+        {
+            _user.Id = id;
+            return this;
+        }
+
+        public UserBuilder SetFirstName(string firstName)
+        {
+            _user.FirstName = firstName;
             return this;
         }
 
@@ -40,7 +48,32 @@ namespace  Ecommerce.Services.DAO.Builders
 
         public UserBuilder SetPassword(string password)
         {
-            _user.Password = HashPassword(password);
+            _user.Password = password;
+            return this;
+        }
+
+        // Ajout des nouvelles propriétés
+        public UserBuilder SetAddress(string address)
+        {
+            _user.Address = address;
+            return this;
+        }
+
+        public UserBuilder SetPhoneNumber(string phoneNumber)
+        {
+            _user.PhoneNumber = phoneNumber;
+            return this;
+        }
+
+        public UserBuilder SetCity(string city)
+        {
+            _user.City = city;
+            return this;
+        }
+
+        public UserBuilder SetPostalCode(string postalCode)
+        {
+            _user.PostalCode = postalCode;
             return this;
         }
 
@@ -49,13 +82,13 @@ namespace  Ecommerce.Services.DAO.Builders
             return _user;
         }
 
-        private string HashPassword(string password)
+      /*  private string HashPassword(string password)
         {
             using (var sha256 = SHA256.Create())
             {
                 var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
                 return BitConverter.ToString(hashedBytes).Replace("-", "").ToLower();
             }
-        }
+        }*/
     }
 }

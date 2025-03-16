@@ -1,26 +1,25 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿    using Ecommerce.Services.DAO.Enums;
 
-namespace Ecommerce.Services.DAO.DTOs
-{
-    public class UserDTO
+    namespace Ecommerce.Services.DAO.DTOs
     {
-            public int Id { get; set; }
-
-            [Required(ErrorMessage = "Le nom complet est requis.")]
-            [RegularExpression(@"^[A-Za-z\s]+$", ErrorMessage = "Le nom complet ne peut contenir que des lettres et des espaces.")]
-            public string FullName { get; set; }
-
-            [Required(ErrorMessage = "L'email est requis.")]
-            [EmailAddress(ErrorMessage = "L'email n'est pas valide.")]
+        public class UserDTO
+        {
+            public string Id { get; set; }
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
             public string Email { get; set; }
-
-            [Required(ErrorMessage = "Le mot de passe est requis.")]
-            [RegularExpression(@"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$", ErrorMessage = "Le mot de passe doit contenir au moins 8 caractères, une lettre et un chiffre.")]
             public string Password { get; set; }
+            public UserStatus Status { get; set; }
+            public string Role { get; set; }
+            public string? StripeAccountId { get; set; }
+            public string? BankAccountDetails { get; set; }
+            public string? Address { get; set; } // Ajout de l'adresse
+            public string? PhoneNumber { get; set; } // Ajout du numéro de téléphone
+            public string? City { get; set; } // Ajout de la ville
+            public string? PostalCode { get; set; } // Ajout du code postal
+            public string ConfirmationCode { get; set; }
+            public Boolean? IsConfirmed { get; set; }
+            public List<string> BooksForSaleOrRent { get; set; } = new List<string>();
+            public List<string> Transactions { get; set; } = new List<string>();
         }
     }
-
-
-
-
-

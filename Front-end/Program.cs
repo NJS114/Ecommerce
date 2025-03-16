@@ -10,10 +10,7 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod();
     });
 });
-builder.Services.AddGrpcClient<UserService.UserServiceClient>(o =>
-{
-    o.Address = new Uri("https://localhost:5001"); // Remplacez par l'URL de votre serveur gRPC
-});
+
 
 var app = builder.Build();
 

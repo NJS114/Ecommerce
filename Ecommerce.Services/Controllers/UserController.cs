@@ -1,47 +1,51 @@
-﻿
-    using Ecommerce.Services.DAO.DTOs;
-    using Ecommerce.Services.DAO.Interfaces.IRepository;
+﻿using Ecommerce.Services.DAO.DTOs;
+using Ecommerce.Services.DAO.Interfaces.IRepository;
 using Microsoft.AspNetCore.Mvc;
-    using System.Collections.Generic;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
-
 using System.Threading.Tasks;
 
-    namespace  Ecommerce.Services.Controllers
+namespace  Ecommerce.Services.Controllers
+{
+    [AllowAnonymous]
+
+    [Route("api/[controller]")]
+    [ApiController]
+    public class UserController : ControllerBase
     {
-        [Authorize(Roles = "Admin")]
-        [Route("api/[controller]")]
-        [ApiController]
-        public class UserController : ControllerBase
+        private readonly IUserRepository _userRepository;
+        private readonly IJwtService _jwtService;
+
+        public UserController(IUserRepository userRepository, IJwtService jwtService)
         {
-            private readonly IUserRepository _userRepository;
+            _userRepository = userRepository;
+            _jwtService = jwtService;
+        }
 
-            public UserController(IUserRepository userRepository)
-            {
-                _userRepository = userRepository;
-            }
+        // GET: api/users
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<RegisterDTO>>> GetAllUsers(int page, int pageSize)
+        {
+            var users = await _userRepository.GetAllUsersAsDTOAsync( page,  pageSize);
+            return Ok(users);
+        }
 
-            // GET: api/users
-            [HttpGet]
-            public async Task<ActionResult<IEnumerable<UserDTO>>> GetAllUsers()
+        // GET: api/users/{id}
+        [AllowAnonymous]
+        [HttpGet("{id}")]
+        public async Task<ActionResult<RegisterDTO>> GetUser(string id)
+        {
+            var user = await _userRepository.GetUserByIdAsync(id);
+            if (user == null)
             {
-                var users = await _userRepository.GetAllUsersAsDTOAsync();
-                return Ok(users);
+                return NotFound();
             }
-
-            // GET: api/users/{id}
-            [HttpGet("{id}")]
-            public async Task<ActionResult<UserDTO>> GetUser(int id)
-            {
-                var user = await _userRepository.GetUserWithDetailsAsync(id);
-                if (user == null)
-                {
-                    return NotFound();
-                }
-                return Ok(user);
-            }
+            return Ok(user);
+        }
 
         // POST: api/users
+        [AllowAnonymous]
         [HttpPost]
         public async Task<ActionResult> CreateUserAsync([FromBody] UserDTO userDto)
         {
@@ -53,68 +57,86 @@ using System.Threading.Tasks;
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
-            }   
-            if (string.IsNullOrWhiteSpace(userDto.FullName) ||
+            }
+
+            if (string.IsNullOrWhiteSpace(userDto.FirstName) ||
                 string.IsNullOrWhiteSpace(userDto.Email) ||
+                string.IsNullOrWhiteSpace(userDto.LastName) ||
                 string.IsNullOrWhiteSpace(userDto.Password))
             {
                 return BadRequest("Tous les champs sont requis.");
             }
 
-            // Assurez-vous que l'email est valide
             if (!IsValidEmail(userDto.Email))
             {
                 return BadRequest("L'adresse email est invalide.");
             }
 
-            await _userRepository.CreateUserFromDTOAsync(userDto);
-            return CreatedAtAction(nameof(GetUser), new { id = userDto.Id }, userDto);
+            await _userRepository.CreateUserDTOFromDTOAsync(userDto);
+
+           
+            var token = _jwtService.GenerateToken(userDto.Email);
+
+            return Ok(new
+            {
+                Message = "Utilisateur créé avec succès.",
+                Token = token
+            });
         }
+
         private bool IsValidEmail(string email)
+    {
+        try
         {
-            try
-            {
-                var addr = new System.Net.Mail.MailAddress(email);
-                return addr.Address == email;
-            }
-            catch
-            {
-                return false;
-            }
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
         }
+        catch
+        {
+            return false;
+        }
+    }
+
 
         // PUT: api/users/{id}
         [HttpPut("{id}")]
-            public async Task<ActionResult> UpdateUser(int id, [FromBody] UserDTO userDto)
-            {
-                if (userDto == null || userDto.Id != id)
-                {
-                    return BadRequest("Données de l'utilisateur invalides.");
-                }
-
-                await _userRepository.UpdateNewPasswordAsync(userDto);
-                return NoContent();
-            }
-
-            // DELETE: api/users/{id}
-            [HttpDelete("{id}")]
-            public async Task<ActionResult> DeleteUser(int id)
+        public async Task<ActionResult> UpdateUser(string id, [FromBody] UserDTO userDto)
         {
-            try
+            if (userDto == null)
             {
-                await _userRepository.DeleteUserFromDTOAsync(id); 
-                return NoContent();
+                return BadRequest("Les données de l'utilisateur sont invalides.");
             }
-            catch (KeyNotFoundException)
+
+            // Comparer les deux IDs (id et userDto.Id) en tant que chaînes
+            if (id != userDto.Id)
             {
-                return NotFound($"Utilisateur avec ID {id} introuvable.");
+                return BadRequest("L'ID de l'utilisateur ne correspond pas à l'ID dans l'URL.");
             }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
+
+            await _userRepository.UpdateUserDTOAsync(id, userDto);
+            return NoContent();
         }
+
+
+        // DELETE: api/users/{id}
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> DeleteUser(string id)
+    {
+        try
+        {
+            await _userRepository.DeleteUserFromDTOAsync(id); 
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound($"Utilisateur avec ID {id} introuvable.");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
         }
     }
+    }
+}
 
 

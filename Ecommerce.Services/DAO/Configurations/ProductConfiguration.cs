@@ -15,7 +15,9 @@ namespace  Ecommerce.Services.DAO.Configurations
             builder.Property(p => p.Description)
                 .HasMaxLength(500);  
             builder.Property(p => p.Price)
-                .HasColumnType("float(18,2)");  
+                .HasColumnType("float(18,2)");
+            builder.Property(p => p.Stock)
+               .HasColumnType("float(18,2)");
         }
     }
 }

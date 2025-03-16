@@ -1,4 +1,5 @@
-﻿using  Ecommerce.Services.DAO.Models;
+﻿using Ecommerce.Services.DAO.Enums;
+using Ecommerce.Services.DAO.Models;
 
 namespace Ecommerce.Services.DAO.Builders
 {
@@ -16,13 +17,12 @@ namespace Ecommerce.Services.DAO.Builders
             _product = product;
         }
 
-        public ProductBuilder SetId(int id)
+        public ProductBuilder SetId(string id)
         {
             _product.Id = id;
             return this;
         }
 
-        
         public ProductBuilder SetName(string name)
         {
             _product.Name = name;
@@ -35,19 +35,22 @@ namespace Ecommerce.Services.DAO.Builders
             return this;
         }
 
-        public ProductBuilder SetPrice(float price)
+        public ProductBuilder SetPrice(decimal price)
         {
             _product.Price = price;
             return this;
         }
 
-        public ProductBuilder SetCategoryId(int categoryId)
+        public ProductBuilder SetCategory(Category category)
         {
-            _product.CategoryId = categoryId;
+            _product.Category = category; 
             return this;
         }
-
-      
+        public ProductBuilder SetStock(int stock)
+        {
+            _product.Stock = stock;
+            return this;
+        }
         public Product Build()
         {
             return _product;

@@ -1,95 +1,154 @@
 ﻿using Ecommerce.Services.DAO.Builders;
 using Ecommerce.Services.DAO.DTOs;
+using Ecommerce.Services.DAO.Enums;
+using Ecommerce.Services.DAO.Interfaces.IDAO;
 using Ecommerce.Services.DAO.Interfaces.IRepository;
-using Ecommerce.Services.DAO.Interfaces.ProductDAO;
 using Ecommerce.Services.DAO.Mapping;
 using Ecommerce.Services.DAO.Models;
-using Nest;
+using Stripe;
+using Stripe.Climate;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Product = Ecommerce.Services.DAO.Models.Product;
+using ProductService = Stripe.ProductService;
+
 
 namespace Ecommerce.Services.DAO.Repositories
 {
     public class ProductRepository : IProductRepository
     {
         private readonly IProductDAO _productDAO;
-        private readonly IElasticClient _elasticClient;
+        private readonly ProductService _stripeProductService;
+        private readonly PriceService _stripePriceService;
 
-        public ProductRepository(IProductDAO productDAO, IElasticClient elasticClient)
+        // Constructeur
+        public ProductRepository(IProductDAO productDAO)
         {
             _productDAO = productDAO;
-            _elasticClient = elasticClient;  
+            _stripeProductService = new ProductService();
+            _stripePriceService = new PriceService();
         }
 
-
-       
-
-        // Récupère tous les produits sous forme de DTO
-        public async Task<IEnumerable<ProductDTO>> GetAllProductDTO()
+        #region Méthodes CRUD
+        public async Task<ProductDTO> GetProductByIdAsync(string id)
         {
-            var products = await _productDAO.GetAllProduct();
-            return ProductMapping.ToDTOList(products);
-        }
+            var product = await _productDAO.GetProductById(id);
+            if (product == null) return null;
 
-        // Crée un produit, l'ajoute dans la base de données et l'indexe dans Elasticsearch
-        public async Task<ProductDTO> CreateProductDTO(ProductDTO productDTO)
-        {
-            var category = new Category { Name = productDTO.CategoryName };
-            var product = new ProductBuilder(new Product()
+            var productDTO = new ProductDTO
             {
-                Name = productDTO.Name,
-                Description = productDTO.Description,
-                Price = productDTO.Price,
-                Category = category
-            }).Build();
-
-            // Créer le produit dans la base de données
-            await _productDAO.CreateProduct(product);
-
-            // Indexer le produit dans Elasticsearch
-            var indexResponse = await _elasticClient.IndexDocumentAsync(product);
-
-            if (!indexResponse.IsValid)
-            {
-                throw new Exception("Échec de l'indexation du produit dans Elasticsearch.");
-            }
-
-            return ProductMapping.ToDTO(product);
-        }
-
-        // Met à jour un produit dans la base de données et dans Elasticsearch
-        public async Task<ProductDTO> UpdateProductDTO(ProductDTO productDTO)
-        {
-            var category = new Category { Name = productDTO.CategoryName };
-            var product = new Product
-            {
-                Id = productDTO.Id,
-                Name = productDTO.Name,
-                Description = productDTO.Description,
-                Price = productDTO.Price,
-                Category = category
+                Id = product.Id,
+                Name = product.Name,
+                Description = product.Description,
+                Category = product.Category,
+                Price = product.Price,
+                Stock = product.Stock,
+                StripeProductId = product.StripeProductId,
+                StripePriceId = product.StripePriceId,
             };
-
-            // Met à jour le produit dans la base de données
-            await _productDAO.UpdateProduct(product);
-
-            // Mettre à jour l'index dans Elasticsearch
-            var updateResponse = await _elasticClient.UpdateAsync<Product>(product.Id, u => u
-                .Doc(product)  // Mettre à jour le document dans l'index Elasticsearch
-            );
-
-            if (!updateResponse.IsValid)
-            {
-                throw new Exception("Échec de la mise à jour du produit dans Elasticsearch.");
-            }
 
             return productDTO;
         }
 
-        // Supprime un produit de la base de données et de l'index Elasticsearch
-        public async Task<ProductDTO> DeleteProductDTO(int id)
+        public async Task<IEnumerable<ProductDTO>> GetAllProductDTO()
+        {
+            var products = await _productDAO.GetAllProduct();
+
+            var productDTOs = products.Select(p => new ProductDTO
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Description = p.Description,
+                Category = p.Category,
+                Price = p.Price,
+                Stock = p.Stock
+            }).ToList();
+
+            return productDTOs;
+
+        }
+
+        public async Task<ProductDTO> CreateProductDTO(ProductDTO productDTO)
+        {
+            var product = new Product
+            {
+                Name = productDTO.Name,
+                Description = productDTO.Description,
+                Price = productDTO.Price,
+                Category = productDTO.Category,
+                Stock = productDTO.Stock,
+            };
+
+            var stripeProduct = await _stripeProductService.CreateAsync(new ProductCreateOptions
+            {
+                Name = productDTO.Name,
+                Description = productDTO.Description,
+            });
+
+            var priceOptions = new PriceCreateOptions
+            {
+                UnitAmount = (long)(productDTO.Price * 100), 
+                Currency = "usd",
+                Product = stripeProduct.Id,
+            };
+
+            var price = await _stripePriceService.CreateAsync(priceOptions);
+
+            product.StripeProductId = stripeProduct.Id;
+            product.StripePriceId = price.Id; 
+
+            await _productDAO.CreateProduct(product);
+
+            return new ProductDTO
+            {
+                Id = product.Id,
+                Name = productDTO.Name,
+                Price = productDTO.Price,
+                Stock = product.Stock,
+                Category = product.Category,
+                Description = productDTO.Description,
+                StripeProductId = stripeProduct.Id,
+                StripePriceId = price.Id, 
+            };
+        }
+
+        public async Task<ProductDTO> UpdateProductDTO(ProductDTO productDTO)
+        {
+            // Mettre à jour le produit dans votre base de données
+            var product = new Product
+            {
+                Id = productDTO.Id.ToString(),
+                Name = productDTO.Name,
+                Description = productDTO.Description,
+                Price = productDTO.Price,
+                Category = productDTO.Category,
+                Stock = productDTO.Stock,
+            };
+
+            await _productDAO.UpdateProduct(product);
+
+            // Mettre à jour le produit dans Stripe
+            var stripeProduct = await _stripeProductService.GetAsync(productDTO.Id.ToString());
+            var options = new ProductUpdateOptions
+            {
+                Name = productDTO.Name,
+                Description = productDTO.Description,
+            };
+
+            var updatedProduct = await _stripeProductService.UpdateAsync(stripeProduct.Id, options);
+
+            return new ProductDTO
+            {
+                Id = updatedProduct.Id,
+                Name = updatedProduct.Name,
+                Price = productDTO.Price,
+                Description = updatedProduct.Description,
+            };
+        }
+
+        public async Task<ProductDTO> DeleteProductDTO(string id)
         {
             var product = await _productDAO.GetProductById(id);
 
@@ -98,42 +157,40 @@ namespace Ecommerce.Services.DAO.Repositories
                 throw new KeyNotFoundException($"Produit avec ID {id} introuvable.");
             }
 
-            // Supprimer le produit de la base de données
+            // Supprimer le produit dans Stripe
+            await _stripeProductService.DeleteAsync(id);
+
+            // Supprimer le produit de votre base de données
             await _productDAO.DeleteProduct(id);
-
-            // Supprimer le produit de l'index Elasticsearch
-            var deleteResponse = await _elasticClient.DeleteAsync<Product>(id);
-
-            if (!deleteResponse.IsValid)
+            return new ProductDTO
             {
-                throw new Exception("Échec de la suppression du produit dans Elasticsearch.");
-            }
-
-            return ProductMapping.ToDTO(product);
+                Id = product.Id,
+                Name = product.Name,
+                Price = (decimal)product.Price,
+                Description = product.Description,
+                Category = product.Category,
+                Stock = product.Stock,
+            };
         }
 
-        // Recherche des produits dans Elasticsearch par nom ou description
+        #endregion
+
+        #region Méthodes de Recherche
+
         public async Task<IEnumerable<ProductDTO>> SearchProducts(string query)
         {
-            var searchResponse = await _elasticClient.SearchAsync<Product>(s => s
-                .Index("products")
-                .Query(q => q
-                    .MultiMatch(m => m
-                        .Fields(f => f
-                            .Field(p => p.Name)
-                            .Field(p => p.Description)
-                        )
-                        .Query(query)
-                    )
-                )
-            );
+            var products = await _productDAO.GetAllProduct();
+            var filteredProducts = products.Where(p => p.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                                                        p.Description.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
 
-            if (!searchResponse.IsValid)
+            return filteredProducts.Select(p => new ProductDTO
             {
-                throw new Exception("Échec de la recherche de produit dans Elasticsearch.");
-            }
-
-            return searchResponse.Documents.Select(ProductMapping.ToDTO);
+                Id = p.Id,
+                Name = p.Name,
+                Price = (decimal)p.Price,
+            });
         }
+
+        #endregion
     }
 }

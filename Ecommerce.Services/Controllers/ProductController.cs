@@ -2,16 +2,19 @@
 using Ecommerce.Services.DAO.DTOs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Ecommerce.Services.DAO.Interfaces.IRepository;
 
 namespace Ecommerce.Services.Controllers
 {
+    [AllowAnonymous]
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     public class ProductController : ControllerBase
     {
-        private readonly ProductRepository _repository;
+        private readonly IProductRepository _repository;
 
-        public ProductController(ProductRepository repository)
+        public ProductController(IProductRepository repository)
         {
             _repository = repository;
         }
@@ -25,6 +28,7 @@ namespace Ecommerce.Services.Controllers
         }
 
         // POST: /product
+        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> CreateProduct([FromBody] ProductDTO productDTO)
         {
@@ -38,25 +42,21 @@ namespace Ecommerce.Services.Controllers
         }
 
         // GET: /product/{id}
+        [AllowAnonymous]
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetProductById(int id)
+        public async Task<IActionResult> GetProductById(string id)
         {
-            var product = await _repository.GetAllProductDTO(); // Vous devrez implémenter une méthode pour obtenir un produit par ID dans le repository.
-            var foundProduct = product.FirstOrDefault(p => p.Id == id);
+            var product = await _repository.GetProductByIdAsync(id); // Vous devrez implémenter une méthode pour obtenir un produit par ID dans le repository.
+            
 
-            if (foundProduct == null)
-            {
-                return NotFound($"Produit avec ID {id} introuvable.");
-            }
-
-            return Ok(foundProduct);
+            return Ok(product);
         }
 
         // PUT: /product
         [HttpPut]
         public async Task<IActionResult> UpdateProduct([FromBody] ProductDTO productDTO)
         {
-            if (productDTO == null || productDTO.Id == 0)
+            if (productDTO == null || productDTO.Id == "0")
             {
                 return BadRequest("Données du produit invalides.");
             }
@@ -67,11 +67,11 @@ namespace Ecommerce.Services.Controllers
 
         // DELETE: /product/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteProduct(int id)
+        public async Task<IActionResult> DeleteProduct(string id)
         {
             try
             {
-                var deletedProduct = await _repository.DeleteProductDTO(id);
+                var deletedProduct = await _repository.DeleteProductDTO(id.ToString());
                 return Ok(deletedProduct);
             }
             catch (KeyNotFoundException ex)
